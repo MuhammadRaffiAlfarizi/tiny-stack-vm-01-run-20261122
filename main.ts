@@ -62,6 +62,16 @@ function run(p: Uint8Array, inp: Uint8Array): { out: Uint8Array; code: number } 
     if (pc + imm >= n) return end(9);
     steps++;
     const next = pc + 1 + imm;
+    // Fast path for the two hottest opcodes (HALT ends every program,
+    // PUSH8 loads nearly every literal): their traps were already
+    // checked above, so the generic stack checks and switch are redundant.
+    if (op === 0x00) return end(0); // HALT
+    if (op === 0x01) { // PUSH8
+      if (sp + 1 > 256) return end(3);
+      S[sp++] = (p[next - 1] << 24) >> 24;
+      pc = next;
+      continue;
+    }
     if (sp < pops) return end(2);
     if (sp - pops + pushes > 256) return end(3);
     pc = next;
